@@ -166,11 +166,16 @@ public class Main {
             System.out.println("2 - посчитать калорийность салата");
             System.out.println("3 - добавить фильтр по названию");
             System.out.println("4 - добавить фильтр по калорийности");
-            System.out.println("5 - убрать все фильтры");
-            System.out.println("6 - вывести коллекцию");
-            System.out.println("9 - выход");
+            System.out.println("5 - вывести нефильтрованную и отфильтрованную коллекцию");
+            System.out.println("6 - Убрать фильтры");
+            System.out.println("7 - сортировать по возрастанию калорийности (Runnable)");
+            System.out.println("8 - сортировать по убыванию калорийности (Thread)");
+            System.out.println("9 - отменить сортировку");
+            System.out.println("10 - выход");
+            System.out.println("11 - вернуться на этап входа");
 
             int n = scanner.nextInt();
+            scanner.nextLine();
             switch (n) {
                 case 0: // Управление пользователями
                     if (loggedInUser.isAdmin) {
@@ -221,7 +226,6 @@ public class Main {
                     System.out.println("Конечная калорийность салата: ");
                     System.out.format("%.3f\n", sum);
                     break;
-
                 case 3: // Фильтр по названию
                     System.out.println("Введите название овоща для фильтрации (cuc, tom, on): ");
                     filter.filterName = scanner.next();
@@ -236,7 +240,22 @@ public class Main {
                     System.out.println("Фильтр по калорийности установлен.");
                     break;
 
-                case 5: // Убрать фильтры
+                case 5: // Вывод коллекции
+                    System.out.println("Нефильтрованная коллекция: ");
+                    vegetables.forEach(System.out::println);
+
+                    List<Vegetables> filteredVegetablesList = VegetableUtils.applyFilters(
+                            vegetables,
+                            filter.filterByName,
+                            filter.filterName,
+                            filter.filterByCalories,
+                            filter.minCalories
+                    );
+
+                    System.out.println("Отфильтрованная коллекция: ");
+                    filteredVegetablesList.forEach(System.out::println);
+                    break;
+                case 6: // Убрать фильтры
                     filter.filterByName = false;
                     filter.filterByCalories = false;
                     filter.filterName = "";
@@ -244,17 +263,90 @@ public class Main {
                     System.out.println("Все фильтры убраны.");
                     break;
 
-                case 6: // Вывод коллекции
-                    System.out.println("Коллекция овощей: ");
+                case 7: // Сортировка по возрастанию калорийности
+                    isSortingCancelled = false;
+                    List<Vegetables> filteredAsc = VegetableUtils.applyFilters(
+                            vegetables,
+                            filter.filterByName,
+                            filter.filterName,
+                            filter.filterByCalories,
+                            filter.minCalories
+                    );
+                    new Thread(new AscendingSortTask(filteredAsc)).start();
+                    break;
+
+                case 8: // Сортировка по убыванию калорийности
+                    isSortingCancelled = false;
+                    List<Vegetables> filteredDesc = VegetableUtils.applyFilters(
+                            vegetables,
+                            filter.filterByName,
+                            filter.filterName,
+                            filter.filterByCalories,
+                            filter.minCalories
+                    );
+                    new DescendingSortThread(filteredDesc).start();
+                    break;
+
+                case 9: // Отмена сортировки
+                    isSortingCancelled = true;
+                    System.out.println("Сортировка отменена. Текущая коллекция:");
                     vegetables.forEach(System.out::println);
                     break;
 
-                case 9: // Выход
+                case 10: // Выход
                     h = false;
                     break;
+                case 11: // Вернуться на этап входа
+                    loggedInUser = null;  // Сбрасываем пользователя
+                    while (loggedInUser == null) {
+                        System.out.println("Введите логин:");
+                        String username = scanner.nextLine();
+                        System.out.println("Введите пароль:");
+                        String password = scanner.nextLine();
+                        loggedInUser = authenticate(username, password);
+                        if (loggedInUser == null) {
+                            System.out.println("Неверный логин или пароль.");
+                        }
+                    }
+                    break;
+
 
                 default:
                     System.out.println("Неверный ввод. Попробуйте снова.");
+            }
+        }
+    }
+
+    private static class AscendingSortTask implements Runnable {
+        private List<Vegetables> vegetables;
+
+        public AscendingSortTask(List<Vegetables> vegetables) {
+            this.vegetables = vegetables;
+        }
+
+        @Override
+        public void run() {
+            if (!isSortingCancelled) {
+                SortingStrategy.sortAscending(vegetables);
+                System.out.println("Сортировка по возрастанию завершена: ");
+                vegetables.forEach(System.out::println);
+            }
+        }
+    }
+
+    private static class DescendingSortThread extends Thread {
+        private List<Vegetables> vegetables;
+
+        public DescendingSortThread(List<Vegetables> vegetables) {
+            this.vegetables = vegetables;
+        }
+
+        @Override
+        public void run() {
+            if (!isSortingCancelled) {
+                SortingStrategy.sortDescending(vegetables);
+                System.out.println("Сортировка по убыванию завершена: ");
+                vegetables.forEach(System.out::println);
             }
         }
     }
