@@ -1,6 +1,7 @@
 import java.util.*;
 import java.util.stream.Collectors;
 
+// --- Абстрактный класс для овощей ---
 abstract class Vegetables {
     private String name;
     protected int count = 0;
@@ -33,6 +34,7 @@ abstract class Vegetables {
     }
 }
 
+// --- Конкретные классы овощей ---
 class Cucumber extends Vegetables {
     public Cucumber() {
         super("cuc", 18.2);
@@ -51,71 +53,135 @@ class Onion extends Vegetables {
     }
 }
 
-// Интерфейс для подсчета калорийности
+// --- Фабрика для создания овощей (порождающий паттерн) ---
+class VegetableFactory {
+    public static Vegetables createVegetable(String type) {
+        switch (type.toLowerCase()) {
+            case "cuc":
+                return new Cucumber();
+            case "tom":
+                return new Tomato();
+            case "on":
+                return new Onion();
+            default:
+                throw new IllegalArgumentException("Unknown vegetable type: " + type);
+        }
+    }
+}
+
+// --- Интерфейс для подсчёта калорийности ---
 @FunctionalInterface
-interface Myinterface {
+interface MyInterface {
     double sum(int count, double calories);
 }
 
+// --- Паттерн Фасад (упрощает работу с фильтрацией и сортировкой) ---
+class VegetableUtils {
+    public static List<Vegetables> applyFilters(List<Vegetables> vegetables, boolean filterByName, String filterName, boolean filterByCalories, double minCalories) {
+        return vegetables.stream()
+                .filter(v -> !filterByName || v.getName().equalsIgnoreCase(filterName))
+                .filter(v -> !filterByCalories || v.getCalories() >= minCalories)
+                .collect(Collectors.toList());
+    }
+}
+
+// --- Задача для сортировки (поведенческий паттерн: Стратегия) ---
+class SortingStrategy {
+    public static void sortAscending(List<Vegetables> vegetables) {
+        vegetables.sort(Comparator.comparingDouble(Vegetables::getCalories));
+    }
+
+    public static void sortDescending(List<Vegetables> vegetables) {
+        vegetables.sort(Comparator.comparingDouble(Vegetables::getCalories).reversed());
+    }
+}
+
+class Filter {
+    boolean filterByName = false;
+    boolean filterByCalories = false;
+    String filterName = "";
+    double minCalories = 0;
+}
+
+// --- Пользователь и роли ---
+class User {
+    String username;
+    String password;
+    boolean isAdmin;
+    boolean isBlocked;
+
+    public User(String username, String password, boolean isAdmin) {
+        this.username = username;
+        this.password = password;
+        this.isAdmin = isAdmin;
+        this.isBlocked = false;
+    }
+}
+
+// --- Основной класс ---
 public class Main {
-    public static volatile boolean isSortingCancelled = false; // Флаг для отмены сортировки
+    private static Map<String, User> users = new HashMap<>();
+    private static User loggedInUser = null;
+    public static volatile boolean isSortingCancelled = false;
 
     public static void main(String[] args) {
-        Myinterface ref = (count, calories) -> count * calories;
-        boolean h = true;
-        boolean j = true;
-        List<Integer> int_col=Arrays.asList(1, 2, 3, 4, 5);
-        List<String> str_col=Arrays.asList("f", "e", "v", "g", "r");
-        Runnable runnable=new Runnable() {
-            @Override
-            public void run() {
-                System.out.println("Вывод коллекции чисел");
-                int_col.forEach(System.out::println);
-            }
-        };
-        new Thread(runnable).start();
-        Thread thread=new Thread(){
-            @Override
-            public void run() {
-                System.out.println("Вывод строковой коллекции:");
-                str_col.forEach(System.out::println);
-            }
-        };
-        thread.start();
+        // Добавляем администратора
+        users.put("admin", new User("admin", "admin", true));
 
+        MyInterface ref = (count, calories) -> count * calories;
+        boolean h = true;
+
+        // Создаем фильтр
+        Filter filter = new Filter();
+
+        // Инициализация коллекции
         List<Vegetables> vegetables = new ArrayList<>();
         Cucumber cucumbers = new Cucumber();
         Tomato tomatoes = new Tomato();
         Onion onions = new Onion();
-
         vegetables.add(cucumbers);
         vegetables.add(tomatoes);
         vegetables.add(onions);
 
-        boolean filterByName = false;
-        boolean filterByCalories = false;
-        String filterName = "";
-        double minCalories = 0;
-
         Scanner scanner = new Scanner(System.in);
+
+        // Логин
+        while (loggedInUser == null) {
+            System.out.println("Введите логин:");
+            String username = scanner.nextLine();
+            System.out.println("Введите пароль:");
+            String password = scanner.nextLine();
+            loggedInUser = authenticate(username, password);
+            if (loggedInUser == null) {
+                System.out.println("Неверный логин или пароль.");
+            }
+        }
 
         while (h) {
             System.out.println("\nВыберите действие");
-            System.out.println("0 - сделать салат");
-            System.out.println("1 - посчитать калорийность салата");
-            System.out.println("2 - добавить фильтр по названию");
-            System.out.println("3 - добавить фильтр по калорийности");
-            System.out.println("4 - убрать все фильтры");
-            System.out.println("5 - вывести нефильтрованную и отфильтрованную коллекцию");
-            System.out.println("6 - сортировать по возрастанию калорийности (Runnable)");
-            System.out.println("7 - сортировать по убыванию калорийности (Thread)");
-            System.out.println("8 - отменить сортировку");
-            System.out.println("9 - выход из программы");
+            if (loggedInUser.isAdmin) {
+                System.out.println("0 - управление пользователями");
+            }
+            System.out.println("1 - создать салат");
+            System.out.println("2 - посчитать калорийность салата");
+            System.out.println("3 - добавить фильтр по названию");
+            System.out.println("4 - добавить фильтр по калорийности");
+            System.out.println("5 - убрать все фильтры");
+            System.out.println("6 - вывести коллекцию");
+            System.out.println("9 - выход");
 
             int n = scanner.nextInt();
             switch (n) {
-                case 0:
-                    j = true;
+                case 0: // Управление пользователями
+                    if (loggedInUser.isAdmin) {
+                        manageUsers(scanner);
+                    } else {
+                        System.out.println("Доступ запрещён.");
+                    }
+                    break;
+
+                case 1: // Создание салата
+                    boolean j = true;
                     while (j) {
                         System.out.println("\nВыберите овощ: ");
                         System.out.println("1 - добавить огурец");
@@ -141,129 +207,110 @@ public class Main {
                     }
                     break;
 
-                case 1:
-                    boolean finalFilterByName = filterByName;
-                    boolean finalFilterByCalories = filterByCalories;
-                    String finalFilterName = filterName;
-                    double finalMinCalories = minCalories;
-                    List<Vegetables> filteredVegetables = vegetables.stream()
-                            .filter(v -> !finalFilterByName || v.getName().equalsIgnoreCase(finalFilterName))
-                            .filter(v -> !finalFilterByCalories || v.getCalories() >= finalMinCalories)
-                            .collect(Collectors.toList());
-
+                case 2: // Подсчёт калорийности
+                    List<Vegetables> filteredVegetables = VegetableUtils.applyFilters(
+                            vegetables,
+                            filter.filterByName,
+                            filter.filterName,
+                            filter.filterByCalories,
+                            filter.minCalories
+                    );
                     double sum = filteredVegetables.stream()
                             .mapToDouble(v -> ref.sum(v.getCount(), v.getCalories()))
                             .sum();
-
                     System.out.println("Конечная калорийность салата: ");
                     System.out.format("%.3f\n", sum);
                     break;
 
-                case 2:
+                case 3: // Фильтр по названию
                     System.out.println("Введите название овоща для фильтрации (cuc, tom, on): ");
-                    filterName = scanner.next();
-                    filterByName = true;
+                    filter.filterName = scanner.next();
+                    filter.filterByName = true;
                     System.out.println("Фильтр по названию установлен.");
                     break;
 
-                case 3:
+                case 4: // Фильтр по калорийности
                     System.out.println("Введите минимальную калорийность для фильтрации: ");
-                    minCalories = scanner.nextDouble();
-                    filterByCalories = true;
+                    filter.minCalories = scanner.nextDouble();
+                    filter.filterByCalories = true;
                     System.out.println("Фильтр по калорийности установлен.");
                     break;
 
-                case 4:
-                    filterByName = false;
-                    filterByCalories = false;
-                    filterName = "";
-                    minCalories = 0;
+                case 5: // Убрать фильтры
+                    filter.filterByName = false;
+                    filter.filterByCalories = false;
+                    filter.filterName = "";
+                    filter.minCalories = 0;
                     System.out.println("Все фильтры убраны.");
                     break;
 
-                case 5:
-                    System.out.println("Нефильтрованная коллекция: ");
-                    vegetables.forEach(System.out::println);
-
-                    boolean finalFilterByName1 = filterByName;
-                    boolean finalFilterByCalories1 = filterByCalories;
-                    String finalFilterName1 = filterName;
-                    double finalMinCalories1 = minCalories;
-                    List<Vegetables> filteredVegetablesList = vegetables.stream()
-                            .filter(v -> !finalFilterByName1 || v.getName().equalsIgnoreCase(finalFilterName1))
-                            .filter(v -> !finalFilterByCalories1 || v.getCalories() >= finalMinCalories1)
-                            .collect(Collectors.toList());
-
-                    System.out.println("Отфильтрованная коллекция: ");
-                    filteredVegetablesList.forEach(System.out::println);
-                    break;
-
-                case 6:
-                    isSortingCancelled = false;
-                    List<Vegetables> filteredAsc = applyFilters(vegetables, filterByName, filterName, filterByCalories, minCalories);
-                    new Thread(new AscendingSortTask(filteredAsc)).start();
-                    break;
-
-                case 7:
-                    isSortingCancelled = false;
-                    List<Vegetables> filteredDesc = applyFilters(vegetables, filterByName, filterName, filterByCalories, minCalories);
-                    new DescendingSortThread(filteredDesc).start();
-                    break;
-
-                case 8:
-                    isSortingCancelled = true;
-                    System.out.println("Сортировка отменена. Текущая коллекция:");
+                case 6: // Вывод коллекции
+                    System.out.println("Коллекция овощей: ");
                     vegetables.forEach(System.out::println);
                     break;
 
-                case 9:
+                case 9: // Выход
                     h = false;
                     break;
+
+                default:
+                    System.out.println("Неверный ввод. Попробуйте снова.");
             }
         }
     }
 
-    // Функция для применения фильтров
-    public static List<Vegetables> applyFilters(List<Vegetables> vegetables, boolean filterByName, String filterName, boolean filterByCalories, double minCalories) {
-        return vegetables.stream()
-                .filter(v -> !filterByName || v.getName().equalsIgnoreCase(filterName))
-                .filter(v -> !filterByCalories || v.getCalories() >= minCalories)
-                .collect(Collectors.toList());
-    }
-}
-
-class AscendingSortTask implements Runnable {
-    private List<Vegetables> vegetables;
-
-    public AscendingSortTask(List<Vegetables> vegetables) {
-        this.vegetables = vegetables;
-    }
-
-    @Override
-    public void run() {
-        System.out.println("Сортировка по возрастанию начата...");
-        vegetables.sort(Comparator.comparingDouble(Vegetables::getCalories));
-        if (!Main.isSortingCancelled) {
-            System.out.println("Результат сортировки по возрастанию:");
-            vegetables.forEach(System.out::println);
+    private static User authenticate(String username, String password) {
+        User user = users.get(username);
+        if (user != null && !user.isBlocked && user.password.equals(password)) {
+            return user;
         }
-    }
-}
-
-class DescendingSortThread extends Thread {
-    private List<Vegetables> vegetables;
-
-    public DescendingSortThread(List<Vegetables> vegetables) {
-        this.vegetables = vegetables;
+        return null;
     }
 
-    @Override
-    public void run() {
-        System.out.println("Сортировка по убыванию начата...");
-        vegetables.sort(Comparator.comparingDouble(Vegetables::getCalories).reversed());
-        if (!Main.isSortingCancelled) {
-            System.out.println("Результат сортировки по убыванию:");
-            vegetables.forEach(System.out::println);
+    private static void manageUsers(Scanner scanner) {
+        System.out.println("Управление пользователями:");
+        System.out.println("1 - Добавить пользователя");
+        System.out.println("2 - Заблокировать пользователя");
+        System.out.println("3 - Удалить пользователя");
+
+        int choice = scanner.nextInt();
+        scanner.nextLine(); // Consume newline
+        switch (choice) {
+            case 1: // Добавить пользователя
+                System.out.println("Введите логин:");
+                String username = scanner.nextLine();
+                System.out.println("Введите пароль:");
+                String password = scanner.nextLine();
+                System.out.println("Это администратор? (true/false):");
+                boolean isAdmin = scanner.nextBoolean();
+                users.put(username, new User(username, password, isAdmin));
+                System.out.println("Пользователь добавлен.");
+                break;
+
+            case 2: // Заблокировать пользователя
+                System.out.println("Введите логин пользователя:");
+                String userToBlock = scanner.nextLine();
+                User user = users.get(userToBlock);
+                if (user != null) {
+                    user.isBlocked = true;
+                    System.out.println("Пользователь заблокирован.");
+                } else {
+                    System.out.println("Пользователь не найден.");
+                }
+                break;
+
+            case 3: // Удалить пользователя
+                System.out.println("Введите логин пользователя:");
+                String userToDelete = scanner.nextLine();
+                if (users.remove(userToDelete) != null) {
+                    System.out.println("Пользователь удалён.");
+                } else {
+                    System.out.println("Пользователь не найден.");
+                }
+                break;
+
+            default:
+                System.out.println("Неверный ввод.");
         }
     }
 }
